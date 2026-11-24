@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Build the interactive figure map from document.json (and rail.json, if there is one).
 
-Usage:  python build_viewer.py WORK_DIR OUT_DIR [--rail rail.json] [--standalone]
+Usage:  python build_viewer.py WORK_DIR OUT_DIR [--rail rail.json] [--standalone | --single-file]
 
 Reads   WORK_DIR/document.json, WORK_DIR/figures/, WORK_DIR/rail.json (or the file given with --rail)
 Writes  OUT_DIR/index.html and OUT_DIR/figures/
 
 index.html is a page fragment (no <html> or <body>), which is what the Artifact tool publishes.
 With --standalone it is a complete HTML document that opens straight from disk in a browser.
+With --single-file the figures are embedded as well, so the one file can be copied or sent on its own.
 Without a rail.json the left panel lists the top-level sections of the document.
 """
+import base64
 import html
 import json
 import re
@@ -31,6 +33,14 @@ def main(argv):
     if len(argv) < 2:
         sys.exit(__doc__)
     work, out = Path(argv[0]), Path(argv[1])
+    single = "--single-file" in argv
+
+    def img_tag(n, extra=""):
+        """<img> for figure n: a file path, or (single file) a marker that the page fills from its embedded copy."""
+        if not figs[n].get("image"):
+            return ""
+        source = 'data-embedded="%s"' % n if single else 'src="%s"' % esc(figs[n]["image"])
+        return '<img %s alt=""%s>' % (source, extra)
     doc = json.loads((work / "document.json").read_text())
     rail_path = Path(argv[argv.index("--rail") + 1]) if "--rail" in argv else work / "rail.json"
     rail = json.loads(rail_path.read_text()) if rail_path.exists() else None
@@ -103,7 +113,7 @@ def main(argv):
             if n not in figs:
                 continue
             placement[n] = {"path": " › ".join(s for s in section if s), "top": section[0]}
-            picture = '<img src="%s" alt="" loading="lazy">' % esc(figs[n]["image"]) if figs[n].get("image") else ""
+            picture = img_tag(n, ' loading="lazy"')
             body.append('<a class="figcard" id="figcard-%s" href="#fig-%s" data-fig="%s">%s<span class="figcard-text">'
                         '<span class="figcard-no">Figure %s</span><span class="figcard-title">%s</span></span>'
                         '<span class="figcard-go">View</span></a>' % (n, n, n, picture, n, esc(figs[n].get("title") or "")))
@@ -234,12 +244,18 @@ def main(argv):
         rail_html.append("</ol></section>")
 
     # ------------------------------------------------------------ data for the page
+    def embedded(fig):
+        if not fig.get("image"):
+            return None
+        kind = "png" if fig["image"].lower().endswith(".png") else "jpeg"
+        return "data:image/%s;base64,%s" % (kind, base64.b64encode((work / fig["image"]).read_bytes()).decode())
+
     data = {}
     for n in order:
         f = figs[n]
         lead, panels = caption_parts(f)
         data[n] = {"n": int(n), "title": f.get("title") or "", "lead": lead, "panels": panels,
-                   "image": f.get("image"), "w": f.get("w"), "h": f.get("h"),
+                   "image": embedded(f) if single else f.get("image"), "w": f.get("w"), "h": f.get("h"),
                    "placement": placement.get(n, {}).get("path", ""), "anchor": "figcard-%s" % n if n in placement else "",
                    "cites": [{"id": c["id"], "label": c["label"], "section": c["section"], "snippet": snippet(c["pid"], c["label"])}
                              for c in cites[n]],
@@ -247,7 +263,7 @@ def main(argv):
                             for l in links.get(n, []) if l["to"] in meta]}
     thumbs = "".join('<a class="thumb" href="#fig-%s" data-fig="%s" title="Figure %s. %s">%s<span>%s</span></a>' % (
         n, n, n, esc(figs[n].get("title") or ""),
-        '<img src="%s" alt="">' % esc(figs[n]["image"]) if figs[n].get("image") else "", n) for n in order)
+        img_tag(n), n) for n in order)
     default_note = ("Blue tags are the related figures; click one to show it. Figures are matched to the items in this panel "
                     "by their content, which the document does not state itself. Only “Cited in the text” lists the "
                     "citations the document makes.")
@@ -268,20 +284,20 @@ def main(argv):
     page = (Path(__file__).resolve().parent.parent / "assets" / "template.html").read_text()
     for key, value in fill.items():
         page = page.replace(key, value)
-    if "--standalone" in argv:
+    if single or "--standalone" in argv:
         page = ('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
                 '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
                 '<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>\n</head>\n<body>\n'
                 + page + "\n</body>\n</html>\n")
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(page)
-    if (work / "figures").resolve() != (out / "figures").resolve():
+    if not single and (work / "figures").resolve() != (out / "figures").resolve():
         (out / "figures").mkdir(exist_ok=True)
         for n in order:
             if figs[n].get("image"):
                 shutil.copy2(work / figs[n]["image"], out / figs[n]["image"])
 
-    print("wrote", out / "index.html", "(%d KB)" % (len(page) // 1024))
+    print("wrote", out / "index.html", "(%d KB%s)" % (len(page) // 1024, ", figures embedded" if single else ""))
     for n in order:
         d = data[n]
         print("Figure %s | placed: %s | panels: %s | cited %d× %s | linked to: %s" % (

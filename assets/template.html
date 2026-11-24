@@ -243,6 +243,8 @@ body.resizing .pane, body.resizing .rail { pointer-events: none; }
 const FIGS = %%FIGS%%;
 const AIMS = %%AIMS%%;
 const RAIL = %%RAIL_META%%;
+// single-file builds carry the pictures inside FIGS; fill the static <img> tags from there
+document.querySelectorAll('img[data-embedded]').forEach(img => { img.src = FIGS[img.dataset.embedded].image; });
 const ORDER = Object.keys(FIGS).map(Number).sort((a, b) => a - b);
 const app = document.getElementById('app');
 const stage = document.getElementById('stage');

@@ -85,7 +85,12 @@ python scripts/build_viewer.py WORK OUT
 
 This writes `OUT/index.html` and `OUT/figures/`, and prints one line per figure: where it sits, the panels found in its legend, every citation, its links. Read that output. It is the cheapest place to catch a figure cited zero times (true, or a citation style the parser missed?) and a link pointing at an id that does not exist.
 
-`index.html` is a page fragment, which is what the Artifact tool publishes. Add `--standalone` to get a complete HTML file that opens from disk.
+`index.html` is a page fragment, which is what the Artifact tool publishes. Two other forms:
+
+| Flag | Result | Use it when |
+|---|---|---|
+| `--standalone` | A complete HTML file beside its `figures/` folder | Opening from disk on this computer |
+| `--single-file` | One HTML file with the figures embedded | The user wants a file to copy, send, or open on another computer without signing in |
 
 ### 5. Look once, then deliver
 
@@ -93,6 +98,7 @@ Take one screenshot before handing over (headless Chrome on a `--standalone` bui
 
 - **Artifact tool available:** publish `OUT/index.html` with the files in `OUT/figures/` as supporting files, and leave it private.
 - **Otherwise:** build with `--standalone` and give the user the path to `OUT/index.html`.
+- **A file to take elsewhere:** build with `--single-file` into its own folder and hand over that `index.html`, renamed after the document. An artifact link only opens for people signed in with access; this file opens for anyone who has it, so for unpublished work remind the user of that before they pass it on.
 
 ### 6. Tell the user what the page revealed
 

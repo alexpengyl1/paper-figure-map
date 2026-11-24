@@ -36,7 +36,7 @@ python scripts/extract_docx.py paper.docx work
 python scripts/build_viewer.py work out --standalone
 ```
 
-Then open `out/index.html` in a browser.
+Then open `out/index.html` in a browser. Use `--single-file` instead of `--standalone` to embed the figures, so the one HTML file can be copied or sent on its own.
 
 ## Files
 
