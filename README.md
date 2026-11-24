@@ -58,3 +58,7 @@ Then open `out/index.html` in a browser.
 ## Limits
 
 Only main figures ("Figure N", "Fig. N") are mapped. Tables, supplementary figures, scanned PDFs and equations are not handled.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
