@@ -1,0 +1,442 @@
+<title>%%PAGE_TITLE%%</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one-screen reader with three panes: pinned rail | document text | figure stage.
+   Below 1180px the rail becomes a strip above the two panes; below 760px the panes become tabs. */
+:root {
+  --paper: #ECEFF4; --surface: #FFFFFF; --sunk: #F5F7FA; --ink: #1B2330; --muted: #5A6577; --line: #D7DDE6;
+  --aim: #C45911; --aim-soft: #FBECE0; --on-aim: #FFFFFF;
+  --fig: #2468AC; --fig-soft: #E5EFFA; --on-fig: #FFFFFF;
+  --mark: #FFE49A; --figure-ground: #FFFFFF; --scrim: rgba(16, 22, 32, .82);
+  --display: "Space Grotesk", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ui: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --text: "Source Serif 4", Georgia, "Songti SC", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10141A; --surface: #191F28; --sunk: #141920; --ink: #E5E9F0; --muted: #9AA5B5; --line: #2D3643;
+    --aim: #F0965F; --aim-soft: #3A2415; --on-aim: #1A0F07;
+    --fig: #74B4EE; --fig-soft: #15293C; --on-fig: #0B1622;
+    --mark: #6A5410; --figure-ground: #FFFFFF; --scrim: rgba(4, 7, 11, .88); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10141A; --surface: #191F28; --sunk: #141920; --ink: #E5E9F0; --muted: #9AA5B5; --line: #2D3643;
+  --aim: #F0965F; --aim-soft: #3A2415; --on-aim: #1A0F07;
+  --fig: #74B4EE; --fig-soft: #15293C; --on-fig: #0B1622;
+  --mark: #6A5410; --figure-ground: #FFFFFF; --scrim: rgba(4, 7, 11, .88); color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--ui); font-size: 14px; line-height: 1.5; overflow: hidden; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--fig); outline-offset: 2px; border-radius: 4px; }
+
+.app {
+  height: 100%; display: grid; gap: 12px 0; padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  grid-template-columns: min(var(--rail-w, 318px), 45%) 12px minmax(0, 1fr) 12px var(--fig-w, 40%); grid-template-rows: minmax(0, 1fr);
+}
+/* drag handles between the columns */
+.split { position: relative; cursor: col-resize; touch-action: none; border-radius: 6px; }
+.split::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 44px; margin: -22px 0 0 -2px; border-radius: 2px; background: var(--line); transition: background-color .15s, height .15s, margin .15s; }
+.split:hover::after, .split:focus-visible::after, .split.dragging::after { background: var(--fig); height: 88px; margin-top: -44px; }
+body.resizing { cursor: col-resize; user-select: none; -webkit-user-select: none; }
+body.resizing .pane, body.resizing .rail { pointer-events: none; }
+.rail, .pane { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; overflow-y: auto; }
+.tabs { display: none; }
+
+/* ---------- aims rail */
+.rail { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.rail > * { flex: none; }
+.rail-head { display: flex; align-items: baseline; gap: 8px; }
+.rail-head h1 { font-family: var(--display); font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+.rail-head .sub-label { color: var(--muted); font-size: 12px; }
+.rail-toggle { display: none; margin-left: auto; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.aims { display: flex; flex-direction: column; gap: 14px; }
+.obj { border-left: 3px solid var(--line); padding-left: 10px; display: flex; flex-direction: column; gap: 6px; }
+.obj.lit { border-left-color: var(--aim); }
+.obj-head { display: flex; align-items: center; gap: 8px; }
+.obj-tag { font-family: var(--display); font-weight: 600; font-size: 13px; color: var(--aim); text-transform: uppercase; letter-spacing: .06em; }
+.obj-proj { font-size: 11px; font-weight: 600; letter-spacing: .05em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
+.obj-statement { margin: 0; font-family: var(--text); font-size: 14px; line-height: 1.4; font-weight: 600; }
+.jump { background: none; border: 0; padding: 0; text-align: left; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.jump:hover { color: var(--ink); }
+.obj-head .jump { margin-left: auto; }
+.chips { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 5px; }
+.chips-label { font-size: 11.5px; color: var(--muted); margin-right: 2px; }
+.chip { display: inline-flex; align-items: baseline; gap: 3px; font-size: 11.5px; font-weight: 600; color: var(--fig); background: var(--fig-soft); border-radius: 4px; padding: 1px 6px; text-decoration: none; white-space: nowrap; }
+.chip span { font-weight: 500; opacity: .85; }
+.chip.active { background: var(--fig); color: var(--on-fig); }
+.chips .jump { margin-left: 3px; }
+.subaims { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sub { display: flex; gap: 8px; padding: 5px 8px 6px 6px; border-radius: 7px; }
+.sub.lit { background: var(--aim-soft); }
+.roman { flex: none; width: 24px; height: 20px; border-radius: 4px; border: 1px solid var(--aim); color: var(--aim); font-family: var(--display); font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.sub.lit .roman { background: var(--aim); color: var(--on-aim); }
+.sub-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sub-title { margin: 0; font-size: 13px; line-height: 1.4; font-weight: 500; }
+.sub-desc { margin: 2px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.rail-note { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.5; border-top: 1px solid var(--line); padding-top: 10px; }
+
+/* ---------- document text */
+.doc-pane { scroll-padding-top: 16px; }
+.doc { padding: 22px 22px 60px; font-family: var(--text); font-size: 16px; line-height: 1.62; }
+.doc-title { font-family: var(--display); font-size: 21px; line-height: 1.25; font-weight: 600; margin: 0 0 4px; text-wrap: balance; color: var(--aim); }
+.doc-subtitle { font-style: italic; color: var(--muted); margin: 0 0 4px; }
+.doc-source { font-family: var(--ui); font-size: 12px; color: var(--muted); margin: 0 0 18px; }
+.doc h2, .doc h3, .doc h4 { scroll-margin-top: 16px; }
+.doc h2 { font-family: var(--display); font-size: 14px; font-weight: 600; letter-spacing: .08em; color: var(--aim); margin: 34px 0 10px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
+.doc h3 { font-family: var(--ui); font-size: 15px; font-weight: 600; line-height: 1.35; margin: 24px 0 8px; text-wrap: balance; }
+.doc h4 { font-family: var(--ui); font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
+.doc p { margin: 0 0 12px; }
+.doc sup { font-family: var(--ui); font-size: .68em; color: var(--muted); }
+.doc p, .doc li, .doc blockquote { border-radius: 4px; transition: background-color .5s; }
+.doc .flash { background: var(--mark); transition: none; }
+.figref { font-family: var(--ui); font-size: .84em; font-weight: 600; color: var(--fig); background: var(--fig-soft); padding: 1px 5px; border-radius: 4px; text-decoration: none; white-space: nowrap; }
+.figref.active { background: var(--fig); color: var(--on-fig); }
+.figcard { display: flex; align-items: center; gap: 12px; margin: 14px 0 16px; padding: 8px 12px 8px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunk); text-decoration: none; color: inherit; font-family: var(--ui); }
+.figcard img { flex: none; width: 92px; height: 60px; object-fit: cover; object-position: top left; border-radius: 4px; background: var(--figure-ground); border: 1px solid var(--line); }
+.figcard-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.figcard-no { font-family: var(--display); font-size: 12px; font-weight: 600; color: var(--fig); letter-spacing: .05em; text-transform: uppercase; }
+.figcard-title { font-size: 13px; line-height: 1.35; }
+.figcard-go { margin-left: auto; flex: none; font-size: 12px; color: var(--fig); font-weight: 600; }
+.figcard.active { border-color: var(--fig); background: var(--fig-soft); }
+.doc-list { list-style: none; padding: 0; margin: 0 0 12px; display: flex; flex-direction: column; gap: 8px; }
+.doc-list li { padding: 0 4px 0 12px; border-left: 2px solid var(--line); }
+.doc-list li.marked { display: flex; gap: 10px; padding: 2px 4px; border-left: 0; }
+.doc blockquote { margin: 0 0 14px; padding: 4px 0 4px 14px; border-left: 3px solid var(--aim); }
+.doc blockquote footer { font-family: var(--ui); font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.refs { font-family: var(--ui); font-size: 12.5px; line-height: 1.5; color: var(--muted); padding-left: 22px; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+
+/* ---------- figure stage */
+.fig-pane { display: flex; flex-direction: column; overflow: hidden; }
+.thumbs-wrap { flex: none; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.thumbs { display: flex; gap: 6px; padding: 10px 12px; width: max-content; }
+.thumb { position: relative; flex: none; width: 66px; height: 46px; border-radius: 6px; border: 1px solid var(--line); overflow: hidden; background: var(--figure-ground); display: block; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; opacity: .82; }
+.thumb:not(:has(img)) { background: var(--sunk); }
+.thumb span { position: absolute; left: 0; bottom: 0; min-width: 18px; padding: 0 5px; font-family: var(--display); font-size: 11px; font-weight: 600; background: var(--surface); color: var(--ink); border-top-right-radius: 5px; text-align: center; }
+.thumb.active { border-color: var(--fig); box-shadow: 0 0 0 2px var(--fig); }
+.thumb.active img { opacity: 1; }
+.thumb.active span { background: var(--fig); color: var(--on-fig); }
+.stage { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+.stage > * { flex: none; }
+.fig-head { display: flex; flex-direction: column; gap: 3px; }
+.fig-head-row { display: flex; align-items: center; gap: 10px; }
+.fig-no { font-family: var(--display); font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--fig); }
+.nav { margin-left: auto; display: flex; gap: 4px; }
+.nav button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; width: 30px; height: 26px; cursor: pointer; font-size: 13px; line-height: 1; }
+.nav button:hover { border-color: var(--fig); color: var(--fig); }
+.fig-head h2 { font-family: var(--display); font-size: 18px; line-height: 1.3; font-weight: 600; margin: 0; text-wrap: balance; }
+.where { margin: 0; font-size: 12.5px; color: var(--muted); }
+.fig-img { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--figure-ground); cursor: zoom-in; overflow: hidden; }
+.fig-img img { display: block; width: 100%; height: auto; }
+.stage h3 { font-family: var(--ui); font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.cites, .aimlinks, .panels { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cite { width: 100%; text-align: left; background: var(--sunk); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+.cite:hover { border-color: var(--fig); }
+.cite.from { border-color: var(--fig); background: var(--fig-soft); }
+.cite-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.cite-label { font-weight: 600; color: var(--fig); font-size: 13px; white-space: nowrap; }
+.cite-sec { font-size: 12px; color: var(--muted); }
+.cite-snip { font-family: var(--text); font-size: 14px; line-height: 1.5; }
+.cite-snip mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 2px; }
+.empty { margin: 0; font-size: 13px; color: var(--muted); background: var(--sunk); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 10px; }
+.aimlinks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 7px 10px; border-radius: 8px; background: var(--aim-soft); }
+.aim-id { font-family: var(--display); font-size: 12px; font-weight: 600; color: var(--aim); white-space: nowrap; }
+.aim-id b { font-weight: 600; margin-left: 4px; padding: 0 5px; border: 1px solid var(--aim); border-radius: 4px; }
+.aim-why { font-size: 13px; }
+.aim-title { grid-column: 2; font-family: var(--text); font-size: 13px; color: var(--muted); line-height: 1.4; }
+.note { margin: 6px 0 0; font-size: 11.5px; color: var(--muted); }
+.caption { font-family: var(--text); font-size: 14.5px; line-height: 1.55; }
+.caption p { margin: 0 0 8px; }
+.caption sup { font-family: var(--ui); font-size: .68em; color: var(--muted); }
+.panels li { display: flex; gap: 10px; }
+.panel-k { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--surface); font-family: var(--display); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+
+/* ---------- zoom */
+.zoom { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; flex-direction: column; }
+.zoom-bar { flex: none; display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); color: #F2F4F7; font-size: 13px; }
+.zoom-bar strong { font-family: var(--display); font-weight: 600; margin-right: auto; }
+.zoom-bar button { background: rgba(255, 255, 255, .12); color: #F2F4F7; border: 1px solid rgba(255, 255, 255, .28); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.zoom-bar button[aria-pressed="true"] { background: #F2F4F7; color: #10141A; }
+.zoom-scroll { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 16px; display: flex; }
+.zoom-scroll img { margin: auto; background: #FFFFFF; border-radius: 4px; max-width: 100%; max-height: 100%; object-fit: contain; cursor: zoom-in; }
+.zoom.actual .zoom-scroll img { max-width: none; max-height: none; cursor: zoom-out; }
+
+/* ---------- narrower layouts */
+@media (max-width: 1179px) {
+  .app { grid-template-columns: minmax(0, 1fr) 12px var(--fig-w2, 52%); grid-template-rows: auto minmax(0, 1fr); }
+  .split-rail { display: none; }
+  .rail { grid-column: 1 / -1; padding: 10px 12px; gap: 8px; max-height: 46vh; }
+  .rail-toggle { display: inline-block; }
+  .aims { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
+  .rail-note { display: none; }
+  .rail:not(.open) .obj-statement { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13.5px; }
+  .rail:not(.open) .obj-chips, .rail:not(.open) .sub .sub-desc, .rail:not(.open) .sub .chips { display: none; }
+  .rail:not(.open) .subaims { gap: 0; }
+  .rail:not(.open) .sub { padding: 2px 6px 2px 4px; align-items: center; }
+  .rail:not(.open) .sub-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+  .rail.open .rail-note { display: block; }
+}
+@media (max-width: 759px) {
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 8px; padding-block: 8px; }
+  .split { display: none; }
+  .aims { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .rail { max-height: 50vh; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  .tabs button { border: 0; background: none; border-radius: 6px; padding: 6px; cursor: pointer; font-weight: 600; color: var(--muted); }
+  .tabs button[aria-selected="true"] { background: var(--fig); color: var(--on-fig); }
+  .app[data-view="fig"] .doc-pane, .app[data-view="text"] .fig-pane { display: none; }
+  .doc { padding: 16px 16px 48px; font-size: 15.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .doc p, .doc li, .doc blockquote, .split::after { transition: none; } }
+</style>
+
+<div class="app" id="app" data-view="fig">
+  <aside class="rail" id="rail" aria-label="Pinned panel">
+    <div class="rail-head">
+      <h1>%%RAIL_HEADING%%</h1>
+      <span class="sub-label">%%RAIL_LABEL%%</span>
+      <button class="rail-toggle" id="railToggle" type="button" aria-expanded="false">Expand</button>
+    </div>
+    <div class="aims">
+%%RAIL%%
+    </div>
+    <p class="rail-note">%%RAIL_NOTE%%</p>
+  </aside>
+  <div class="split split-rail" id="splitRail" role="separator" aria-orientation="vertical" aria-label="Resize the pinned panel" title="Drag to resize. Double-click to reset." tabindex="0"></div>
+
+  <nav class="tabs" aria-label="Switch view">
+    <button type="button" data-view="fig" aria-selected="true">Figures</button>
+    <button type="button" data-view="text" aria-selected="false">Text</button>
+  </nav>
+
+  <main class="pane doc-pane" id="docPane">
+    <article class="doc">
+      <p class="doc-title">%%DOC_TITLE%%</p>
+      <p class="doc-subtitle">%%DOC_SUBTITLE%%</p>
+      <p class="doc-source">%%SOURCE_LINE%%</p>
+%%DOC%%
+    </article>
+  </main>
+
+  <div class="split split-fig" id="splitFig" role="separator" aria-orientation="vertical" aria-label="Resize the figure column" title="Drag to resize. Double-click to reset." tabindex="0"></div>
+  <section class="pane fig-pane" id="figPane" aria-label="Figures">
+    <div class="thumbs-wrap"><div class="thumbs" id="thumbs">%%THUMBS%%</div></div>
+    <div class="stage" id="stage"></div>
+  </section>
+</div>
+
+<div class="zoom" id="zoom" hidden>
+  <div class="zoom-bar">
+    <strong id="zoomTitle"></strong>
+    <button type="button" id="zoomActual" aria-pressed="false">Actual size</button>
+    <button type="button" id="zoomClose">Close</button>
+  </div>
+  <div class="zoom-scroll"><img id="zoomImg" alt=""></div>
+</div>
+
+<script>
+const FIGS = %%FIGS%%;
+const AIMS = %%AIMS%%;
+const RAIL = %%RAIL_META%%;
+const ORDER = Object.keys(FIGS).map(Number).sort((a, b) => a - b);
+const app = document.getElementById('app');
+const stage = document.getElementById('stage');
+const rail = document.getElementById('rail');
+const zoom = document.getElementById('zoom');
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let current = null;
+let fromCite = null;
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function setView(view) {
+  app.dataset.view = view;
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
+}
+
+function show(n) {
+  const f = FIGS[n];
+  if (!f) return;
+  current = n;
+  const cites = f.cites.length
+    ? '<ul class="cites">' + f.cites.map(c =>
+        '<li><button class="cite' + (c.id === fromCite ? ' from' : '') + '" type="button" data-target="' + c.id + '">' +
+        '<span class="cite-top"><span class="cite-label">' + esc(c.label) + '</span><span class="cite-sec">' + esc(c.section) + '</span></span>' +
+        '<span class="cite-snip">' + c.snippet + '</span></button></li>').join('') + '</ul>'
+    : '<p class="empty">The text does not cite this figure.</p>';
+  const aims = f.aims.map(a =>
+    '<li><span class="aim-id">' + esc(AIMS[a.id].label.replace(/ · $/, '')) + (a.panels ? '<b>' + esc(a.panels) + '</b>' : '') + '</span>' +
+    '<span class="aim-why">' + esc(a.why) + '</span><span class="aim-title">' + esc(AIMS[a.id].title) + '</span></li>').join('');
+  const panels = f.panels.length
+    ? '<ul class="panels">' + f.panels.map(p => '<li><span class="panel-k">' + p.k + '</span><span>' + p.html + '</span></li>').join('') + '</ul>'
+    : '';
+  stage.innerHTML =
+    '<header class="fig-head"><div class="fig-head-row"><span class="fig-no">Figure ' + n + ' / ' + ORDER.length + '</span>' +
+    '<span class="nav"><button type="button" data-step="-1" aria-label="Previous figure">←</button><button type="button" data-step="1" aria-label="Next figure">→</button></span></div>' +
+    '<h2>' + esc(f.title) + '</h2>' +
+    (f.anchor ? '<p class="where">Position in the document: <button class="jump" type="button" data-target="' + f.anchor + '">' + esc(f.placement || 'show') + '</button></p>' : '') + '</header>' +
+    (f.image
+      ? '<button class="fig-img" type="button" id="figImg" aria-label="Enlarge Figure ' + n + '"><img src="' + esc(f.image) + '"' + (f.w ? ' width="' + f.w + '" height="' + f.h + '"' : '') + ' alt="Figure ' + n + '. ' + esc(f.title) + '"></button>'
+      : '<p class="empty">The source file holds no picture for this figure.</p>') +
+    '<section><h3>Cited in the text</h3>' + cites + '</section>' +
+    (f.aims.length ? '<section><h3>' + esc(RAIL.linksHeading) + '</h3><ul class="aimlinks">' + aims + '</ul>' + (RAIL.inferred ? '<p class="note">Matched by figure content; not stated in the document.</p>' : '') + '</section>' : '') +
+    ((f.lead || panels) ? '<section class="caption"><h3>Legend</h3>' + (f.lead ? '<p>' + f.lead + '</p>' : '') + panels + '</section>' : '');
+  stage.scrollTop = 0;
+  document.querySelectorAll('[data-fig]').forEach(el => el.classList.toggle('active', Number(el.dataset.fig) === n));
+  const lit = new Set();
+  f.aims.forEach(a => { lit.add(a.id); if (AIMS[a.id].parent) lit.add(AIMS[a.id].parent); });
+  document.querySelectorAll('.rail [data-aim]').forEach(el => el.classList.toggle('lit', lit.has(el.dataset.aim)));
+  const thumb = document.querySelector('.thumb.active');
+  if (thumb && thumb.scrollIntoView) thumb.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  try { if (location.hash !== '#fig-' + n) location.hash = 'fig-' + n; } catch (e) {}
+}
+
+function jump(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  setView('text');
+  el.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' });
+  const block = el.closest('p, li, blockquote, .figcard, h2, h3, h4') || el;
+  block.classList.add('flash');
+  setTimeout(() => block.classList.remove('flash'), 1400);
+}
+
+function openZoom() {
+  const f = FIGS[current];
+  if (!f.image) return;
+  document.getElementById('zoomImg').src = f.image;
+  document.getElementById('zoomTitle').textContent = 'Figure ' + current + '. ' + f.title;
+  zoom.classList.remove('actual');
+  document.getElementById('zoomActual').setAttribute('aria-pressed', 'false');
+  zoom.hidden = false;
+  document.getElementById('zoomClose').focus();
+}
+function closeZoom() { zoom.hidden = true; const b = document.getElementById('figImg'); if (b) b.focus(); }
+function toggleActual() {
+  const on = zoom.classList.toggle('actual');
+  document.getElementById('zoomActual').setAttribute('aria-pressed', String(on));
+}
+
+document.addEventListener('click', e => {
+  const link = e.target.closest('a[data-fig]');
+  if (link) {
+    e.preventDefault();
+    fromCite = link.classList.contains('figref') ? link.id : null;
+    setView('fig');
+    show(Number(link.dataset.fig));
+    return;
+  }
+  const target = e.target.closest('[data-target]');
+  if (target) { jump(target.dataset.target); return; }
+  const more = e.target.closest('.more');
+  if (more) {
+    const desc = more.closest('.sub-body').querySelector('.sub-desc');
+    desc.hidden = !desc.hidden;
+    more.setAttribute('aria-expanded', String(!desc.hidden));
+    return;
+  }
+  const step = e.target.closest('[data-step]');
+  if (step) { move(Number(step.dataset.step)); return; }
+  const tab = e.target.closest('.tabs button');
+  if (tab) { setView(tab.dataset.view); return; }
+  if (e.target.closest('#figImg')) { openZoom(); return; }
+  if (e.target.closest('#zoomClose')) { closeZoom(); return; }
+  if (e.target.closest('#zoomActual') || e.target.closest('#zoomImg')) { toggleActual(); return; }
+  if (e.target.closest('#railToggle')) {
+    const open = rail.classList.toggle('open');
+    const b = document.getElementById('railToggle');
+    b.textContent = open ? 'Collapse' : 'Expand';
+    b.setAttribute('aria-expanded', String(open));
+  }
+});
+
+function move(step) {
+  const i = ORDER.indexOf(current);
+  fromCite = null;
+  show(ORDER[(i + step + ORDER.length) % ORDER.length]);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !zoom.hidden) { closeZoom(); return; }
+  if (e.target.closest('input, textarea, .split')) return;
+  if (e.key === 'ArrowLeft') move(-1);
+  if (e.key === 'ArrowRight') move(1);
+});
+// ---------- column widths: drag a handle, or focus it and use the arrow keys; double-click resets
+const STORE = 'figure-map-columns';
+const narrow = window.matchMedia('(max-width: 1179px)');
+let widths = {};
+try { widths = JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { widths = {}; }
+function applyWidths() {
+  [['rail', '--rail-w', 'px'], ['fig', '--fig-w', '%'], ['fig2', '--fig-w2', '%']].forEach(([key, prop, unit]) => {
+    if (typeof widths[key] === 'number') app.style.setProperty(prop, widths[key] + unit);
+    else app.style.removeProperty(prop);
+  });
+}
+function saveWidths() { try { localStorage.setItem(STORE, JSON.stringify(widths)); } catch (e) {} }
+function contentWidth() {
+  const cs = getComputedStyle(app);
+  return app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+}
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function setRail(px) {
+  const total = contentWidth();
+  const figPx = document.getElementById('figPane').getBoundingClientRect().width;
+  widths.rail = Math.round(clamp(px, 200, Math.min(total * 0.45, total - figPx - 24 - 240)));
+  applyWidths();
+}
+function setFig(px) {
+  const total = contentWidth();
+  const railPx = narrow.matches ? 0 : rail.getBoundingClientRect().width + 12;
+  const pct = clamp(px, 260, total - railPx - 12 - 240) / total * 100;
+  widths[narrow.matches ? 'fig2' : 'fig'] = Math.round(pct * 10) / 10;
+  applyWidths();
+}
+document.querySelectorAll('.split').forEach(handle => {
+  const isRail = handle.id === 'splitRail';
+  const paneWidth = () => (isRail ? rail : document.getElementById('figPane')).getBoundingClientRect().width;
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add('dragging');
+    document.body.classList.add('resizing');
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!handle.classList.contains('dragging')) return;
+    if (isRail) setRail(e.clientX - rail.getBoundingClientRect().left - 6);
+    else setFig(document.getElementById('figPane').getBoundingClientRect().right - e.clientX - 6);
+  });
+  const stop = () => {
+    if (!handle.classList.contains('dragging')) return;
+    handle.classList.remove('dragging');
+    document.body.classList.remove('resizing');
+    saveWidths();
+  };
+  handle.addEventListener('pointerup', stop);
+  handle.addEventListener('pointercancel', stop);
+  handle.addEventListener('dblclick', () => {
+    delete widths[isRail ? 'rail' : (narrow.matches ? 'fig2' : 'fig')];
+    applyWidths();
+    saveWidths();
+  });
+  handle.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const grow = (e.key === 'ArrowRight') === isRail ? 24 : -24;   // the rail grows to the right, the figure column to the left
+    if (isRail) setRail(paneWidth() + grow); else setFig(paneWidth() + grow);
+    saveWidths();
+  });
+});
+applyWidths();
+
+function figFromHash() {
+  const m = /^#fig-(\d+)$/.exec(location.hash);
+  return m && FIGS[m[1]] ? Number(m[1]) : null;
+}
+window.addEventListener('hashchange', () => { const n = figFromHash(); if (n && n !== current) { fromCite = null; show(n); } });
+show(figFromHash() || 1);
+</script>
